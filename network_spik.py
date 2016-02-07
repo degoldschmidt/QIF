@@ -3,13 +3,13 @@ import numpy as np               ## package for scientific computing with Python
 from scipy import sparse as sp   ## package for sparse matrices
 from scipy import stats as st    ## package for stats
 import matplotlib.pyplot as plt  ## package for plotting
-import pyspike as spk
 
 ## Setup parameters and state variables
-N    = 1000                    # number of neurons
-T    = 10000                   # total time to simulate (msec)
+N    = 3000                    # number of neurons
+T    = 20000                   # total time to simulate (msec)
 dt   = 0.5                     # simulation time step (msec)
 time = np.arange(0, T+dt, dt)  # time array
+print("Start simulation with",N, "neurons for", T/1000., "s (step size:", dt/1000.,"s)")
 
 ## QIF/LIF properties
 Vrest    = -65                     # resting potential [mV]
@@ -88,6 +88,9 @@ spikes = np.asarray(spikes)  # need to convert to numpy array to use size and sa
 print("Print number of spikes per neuron per second...")
 print(1000*np.sum(spikes.size/2)/(T*N))
 
-## write spike events into file
+## write params and spike events into file
+params = np.array([[N, T, dt]])
+outfile = "./data/spiking/net.cfg"
+np.savetxt(outfile, params, fmt='%u %u %.2f', delimiter=' ', newline='\n', header='#N #T [ms] #dt [ms]')
 outfile = "./data/spiking/spikes.dat"
-np.savetxt(outfile, spikes, fmt='%5.1f\t%4u', delimiter='\t', newline='\n', header='#t_sp [ms]\t#i_sp', footer='', comments='')
+np.savetxt(outfile, spikes, fmt='%5.1f\t%4u', delimiter=' ', newline='\n', header='#t_sp [ms] #i_sp')
