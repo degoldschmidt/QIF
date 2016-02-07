@@ -55,9 +55,13 @@ def f_LIF(i):
 def f_QIF(i):
     return (Vm[active,i-1] - Vrest)*(Vm[active,i-1] - Vth)/deltaV
 
+## Cumulative exponential distribution
+def cum_exp(x):
+    return 1-np.exp(-dt*x)
+
 ## Escape rate function
-def esc_rate(i):
-    return 1-np.exp( -dt*(1/tau_esc)*np.exp(beta_esc*(Vm[:,i]-Vth))  )
+def esc_rate(V):
+    return (1/tau_esc)*np.exp(beta_esc*(V-Vth))
 
 ## Simulate network (i = time steps; t = simulation time)
 print("Simulate...")
@@ -68,12 +72,12 @@ for i, t in enumerate(time):
     Vm[active,i] = Vm[active,i-1] + dt * ( f_QIF(i) + Rm * I[active, i-1]) / tau_m  # Euler integration of membrane potential
 
     ## Spike generation
-    #spiked = np.nonzero(Vm[:,i] > Vth)           # deterministic spike generation (not used)
-    samples = np.random.binomial(1, esc_rate(i))  # stochastic spike generation based on Bernoulli distribution (binomial with n=1)
-    spiked = np.nonzero(samples)                  # indices of neurons with spike events
-    last_spike[spiked] = t                        # array spike times of last spike for refractory period and synaptic current
+    #spiked = np.nonzero(Vm[:,i] > Vth)                          # deterministic spike generation (not used)
+    samples = np.random.binomial(1, cum_exp(esc_rate(Vm[:,i])))  # stochastic spike generation based on Bernoulli distribution (binomial with n=1)
+    spiked = np.nonzero(samples)                                 # indices of neurons with spike events
+    last_spike[spiked] = t                                       # array spike times of last spike for refractory period and synaptic current
     for i in spiked[0]:
-        spikes.append([t, i])                     # append spike time and spiking neuron index
+        spikes.append([t, i])                                    # append spike time and spiking neuron index
     
     ## Net synaptic current    
     Isyn = (1.-a)*Isyn + a*samples                    # lowpass equation for expontial kernel
