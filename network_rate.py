@@ -17,6 +17,7 @@ Vth      = -50                     # spike threshold [mV]
 deltaV   = Vth - Vrest             # difference between threshold and resting
 Vm       = np.ones([N,len(time)])  # membrane potential [mV] trace over time
 Vm      *= Vrest                   # initial condition of membrane potential
+Vreset   = 30
 tau_m    = 10                      # time constant [msec]
 tau_ref  = 4                       # refractory period [msec]
 tau_psc  = 5                       # post synaptic current filter time constant [msec]
@@ -28,11 +29,11 @@ a        = 1.-np.exp(-dt/tau_psc)  # smoothing factor for exponential kernel
 ## Input currents & firing rate containers
 print("Generate input...")
 I          = np.zeros((N,len(time)))  # net input
+Iconst     = 10.                       # constant external input
 Iext       = np.ones(N)               # externally applied stimulus
 Iext       = Iconst * Iext            # external input set to 0.001 [A]
-Iconst     = 0.                       # constant external input
 rate       = np.zeros((N,len(time)))  # population activity (instantaneous)
-popAct     = np.zeros((N,len(time)))  # population activity (instantaneous)
+popAct     = np.zeros(len(time))      # population activity (instantaneous)
 psthdt     = 400                      # PSTH time duration [msec]
 
 ## Synapse weight matrix
@@ -40,7 +41,7 @@ print("Generate weight matrix...")
 g        = 1.                                               # recurrent gain parameter
 mu_w     = 0                                                # zero mean
 sigma_w  = g*(1/N)                                          # variance 1/N for balance
-w_conn   = 0.01                                             # connectivity in the weight matrix
+w_conn   = 0.1                                             # connectivity in the weight matrix
 rands    = st.norm(loc=mu_w,scale=sigma_w).rvs              # samples from a Gaussian random distr.
 w_rec    = sp.random(N, N, density=w_conn, data_rvs=rands)  # generates sparse matrix
 #print synapses.nnz                                         # prints number of nonzero elements
@@ -67,21 +68,25 @@ print("Simulate...")
 raster = np.zeros([N,len(time)])*np.nan
 for i, t in enumerate(time):
 
+    # Reset mechanism
+    Vm[(Vm[:,i-1]>Vth),i-1] = Vrest
+
     # Euler integration of membrane potential
     Vm[:,i] = Vm[:,i-1] + dt * ( f_QIF(i) + Rm * I[:, i-1]) / tau_m
 
     # net current equals external input + dot product of synaptic weights and synaptic currents
-    popAct[:,i]=esc_rate(V[:,i])
-    I[:,i] = Iext + synapses.dot(popAct[:,i])                          # add "np.sin(0.01*i)*" for oscillating input
+    rate[:,i]=esc_rate(Vm[:,i])
+    popAct[i] = np.sum(rate[:,i])/N
+    I[:,i] = Iext + w_rec.dot(rate[:,i])                          # add "np.sin(0.01*i)*" for oscillating input
 
 ## calculate mean escape rate
 print("Print average firing rate per neuron per second")
-frate = 1000*np.sum(popAct)/(T*N)
+frate = 1000*np.sum(popAct)/T
 print(frate)
-
+print(rate.shape)
 ## write parameters and rates into file
 params = np.array([[N, T, dt]])
 outfile = "./data/rate/net.cfg"
 np.savetxt(outfile, params, fmt='%u %u %.2f', delimiter=' ', newline='\n', header='#N #T [ms] #dt [ms]')
-outfile = "./data/rates/rates.dat"
-np.savetxt(outfile, popAct, fmt='%5.1f\t%4u', delimiter=' ', newline='\n', header='#t_sp [ms] #i_sp')
+outfile = "./data/rate/rates.dat"
+np.savetxt(outfile, rate, delimiter=' ', newline='\n')

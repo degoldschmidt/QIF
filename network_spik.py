@@ -5,7 +5,7 @@ from scipy import stats as st    ## package for stats
 import matplotlib.pyplot as plt  ## package for plotting
 
 ## Setup parameters and state variables
-N    = 3000                    # number of neurons
+N    = 1000                    # number of neurons
 T    = 20000                   # total time to simulate (msec)
 dt   = 0.5                     # simulation time step (msec)
 time = np.arange(0, T+dt, dt)  # time array
@@ -41,7 +41,7 @@ print("Generate weight matrix...")
 g        = 1.                                               # recurrent gain parameter
 mu_w     = 0                                                # zero mean
 sigma_w  = g*(1/N)                                          # variance 1/N for balance
-w_conn   = 0.01                                             # connectivity in the weight matrix
+w_conn   = 0.1                                              # connectivity in the weight matrix
 rands    = st.norm(loc=mu_w,scale=sigma_w).rvs              # samples from a Gaussian random distr.
 w_rec    = sp.random(N, N, density=w_conn, data_rvs=rands)  # generates sparse matrix
 #print synapses.nnz                                         # prints number of nonzero elements
@@ -81,7 +81,7 @@ for i, t in enumerate(time):
     
     ## Net synaptic current    
     Isyn = (1.-a)*Isyn + a*samples                    # lowpass equation for expontial kernel
-    I[:,i] = -np.sin(0.001*i)*Iext + w_rec.dot(Isyn)  # add "np.sin(0.01*i)*" for oscillating input
+    I[:,i] = Iext + w_rec.dot(Isyn)  # add "np.sin(0.01*i)*" for oscillating input
 
 ## calculate mean number of spikes (per neuron and sec) during the whole trial
 spikes = np.asarray(spikes)  # need to convert to numpy array to use size and savetxt 
