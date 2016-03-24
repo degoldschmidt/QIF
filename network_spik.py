@@ -28,9 +28,8 @@ a        = 1.-np.exp(-dt/tau_psc)  # smoothing factor for exponential kernel
 ## Input currents & spike times containers
 print("Generate input...")
 I      = np.zeros((N,len(time)))  # net input
-Iext   = np.ones(N)               # externally applied stimulus
 Iconst = 10.                      # constant external input current
-Iext   = Iconst * Iext            # constant inputs to all neurons
+Iext   = Iconst * np.ones(N)      # externally applied stimulus
 Isyn   = np.zeros(N)              # synaptic current is now lowpass equation
 spikes = []                       # spike times and index
 last_spike = np.zeros(N)-tau_ref  # initialize last spike time vector
@@ -76,8 +75,8 @@ for i, t in enumerate(time):
     samples = np.random.binomial(1, cum_exp(esc_rate(Vm[:,i])))  # stochastic spike generation based on Bernoulli distribution (binomial with n=1)
     spiked = np.nonzero(samples)                                 # indices of neurons with spike events
     last_spike[spiked] = t                                       # array spike times of last spike for refractory period and synaptic current
-    for i in spiked[0]:
-        spikes.append([t, i])                                    # append spike time and spiking neuron index
+    for j in spiked[0]:
+        spikes.append([t, j])                                    # append spike time and spiking neuron index
     
     ## Net synaptic current    
     Isyn = (1.-a)*Isyn + a*samples                    # lowpass equation for expontial kernel

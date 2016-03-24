@@ -19,19 +19,17 @@ Vm       = np.ones([N,len(time)])  # membrane potential [mV] trace over time
 Vm      *= Vrest                   # initial condition of membrane potential
 Vreset   = 30
 tau_m    = 10                      # time constant [msec]
-tau_ref  = 4                       # refractory period [msec]
-tau_psc  = 5                       # post synaptic current filter time constant [msec]
 tau_esc  = 19                      # escape rate time constant [msec]
 beta_esc = 1/4                     # escape rate function slope
 Rm       = 1.                      # membrane resistance
-a        = 1.-np.exp(-dt/tau_psc)  # smoothing factor for exponential kernel
 
 ## Input currents & firing rate containers
 print("Generate input...")
 I          = np.zeros((N,len(time)))  # net input
-Iconst     = 10.                       # constant external input
+Iconst     = 1.                       # constant external input
 Iext       = np.ones(N)               # externally applied stimulus
 Iext       = Iconst * Iext            # external input set to 0.001 [A]
+Iext_time  = np.random.randn(N,len(time)) + Iconst 
 rate       = np.zeros((N,len(time)))  # population activity (instantaneous)
 popAct     = np.zeros(len(time))      # population activity (instantaneous)
 psthdt     = 400                      # PSTH time duration [msec]
@@ -55,27 +53,23 @@ def f_LIF(i):
 def f_QIF(i):
     return (Vm[:,i-1] - Vrest)*(Vm[:,i-1] - Vth)/deltaV
 
-## Cumulative exponential distribution
-def cum_exp(x):
-    return 1-np.exp(-dt*x)
-
 ## Escape rate function
 def esc_rate(V):
     return (1/tau_esc)*np.exp(beta_esc*(V-Vth))
 
 ## Simulate network (i = time steps; t = simulation time)
 print("Simulate...")
-raster = np.zeros([N,len(time)])*np.nan
 for i, t in enumerate(time):
 
     # Reset mechanism
-    Vm[(Vm[:,i-1]>Vth),i-1] = Vrest
+    #spikes = sum(Vm[:,i-1]>Vth)
+    #Vm[(Vm[:,i-1]>Vth),i-1] = Vrest
 
     # Euler integration of membrane potential
     Vm[:,i] = Vm[:,i-1] + dt * ( f_QIF(i) + Rm * I[:, i-1]) / tau_m
 
     # net current equals external input + dot product of synaptic weights and synaptic currents
-    rate[:,i]=esc_rate(Vm[:,i])
+    rate[:,i]=dt*esc_rate(Vm[:,i])
     popAct[i] = np.sum(rate[:,i])/N
     I[:,i] = Iext + w_rec.dot(rate[:,i])                          # add "np.sin(0.01*i)*" for oscillating input
 
@@ -90,3 +84,5 @@ outfile = "./data/rate/net.cfg"
 np.savetxt(outfile, params, fmt='%u %u %.2f', delimiter=' ', newline='\n', header='#N #T [ms] #dt [ms]')
 outfile = "./data/rate/rates.dat"
 np.savetxt(outfile, rate, delimiter=' ', newline='\n')
+outfile = "./data/rate/input.dat"
+np.savetxt(outfile, Iext_time, delimiter=' ', newline='\n')
